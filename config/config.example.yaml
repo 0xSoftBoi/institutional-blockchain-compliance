@@ -1,0 +1,193 @@
+# Institutional Blockchain Compliance Configuration
+
+# Application settings
+app:
+  name: "Global Settlement Compliance Monitor"
+  version: "1.0.0"
+  environment: "production"  # development, staging, production
+  debug: false
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8050
+  workers: 4
+  log_level: "info"
+
+# Database configuration
+database:
+  host: "localhost"
+  port: 5432
+  name: "compliance_db"
+  user: "compliance_user"
+  password: "${DB_PASSWORD}"
+  pool_size: 20
+  max_overflow: 10
+
+# Redis configuration
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+
+# Blockchain networks
+blockchains:
+  ethereum:
+    rpc_url: "https://mainnet.infura.io/v3/${INFURA_KEY}"
+    chain_id: 1
+  polygon:
+    rpc_url: "https://polygon-rpc.com"
+    chain_id: 137
+  arbitrum:
+    rpc_url: "https://arb1.arbitrum.io/rpc"
+    chain_id: 42161
+
+# Jurisdictions and regulations
+jurisdictions:
+  enabled:
+    - US
+    - EU
+    - UK
+    - APAC
+  primary: "US"
+
+# Compliance rules
+compliance:
+  # AML/KYC
+  aml:
+    enabled: true
+    transaction_threshold_usd: 10000
+    daily_threshold_usd: 50000
+    kyc_required: true
+    enhanced_dd_threshold: 100000
+  
+  # Sanctions screening
+  sanctions:
+    enabled: true
+    real_time: true
+    providers:
+      - ofac
+      - eu_sanctions
+      - un_sanctions
+    match_threshold: 0.85
+  
+  # Transaction monitoring
+  monitoring:
+    enabled: true
+    real_time: true
+    alert_threshold: "MEDIUM"
+    review_required_threshold: "HIGH"
+
+# Risk scoring
+risk_scoring:
+  enabled: true
+  thresholds:
+    critical: 90
+    high: 75
+    medium: 50
+    low: 25
+  factors:
+    - transaction_amount
+    - counterparty_risk
+    - geographic_risk
+    - transaction_velocity
+    - behavioral_patterns
+
+# Regulatory reporting
+reporting:
+  # US FinCEN
+  fincen:
+    enabled: true
+    institution_id: "${FINCEN_INSTITUTION_ID}"
+    sar_auto_file: false
+    ctr_threshold: 10000
+  
+  # EU MiCA
+  mica:
+    enabled: true
+    casp_id: "${EU_CASP_ID}"
+    reporting_frequency: "quarterly"
+  
+  # UK FCA
+  fca:
+    enabled: true
+    firm_reference_number: "${FCA_FRN}"
+
+# Sanctions screening APIs
+sanctions_apis:
+  ofac:
+    api_key: "${OFAC_API_KEY}"
+    endpoint: "https://api.ofac.treasury.gov"
+  eu_sanctions:
+    api_key: "${EU_SANCTIONS_KEY}"
+    endpoint: "https://webgate.ec.europa.eu/fsd/fsf"
+
+# KYC providers
+kyc_providers:
+  primary:
+    provider: "ComplyAdvantage"
+    api_key: "${KYC_API_KEY}"
+    endpoint: "https://api.complyadvantage.com"
+  backup:
+    provider: "Chainalysis"
+    api_key: "${CHAINALYSIS_KEY}"
+    endpoint: "https://api.chainalysis.com"
+
+# Smart contract compliance
+smart_contract_validation:
+  enabled: true
+  standards:
+    - iso20022
+    - wolfsberg
+  auto_validate: true
+
+# Audit trail
+audit_trail:
+  enabled: true
+  blockchain_based: true
+  retention_years: 7
+  immutable: true
+
+# Integrations
+integrations:
+  # SWIFT
+  swift:
+    enabled: false
+    institution_bic: "${SWIFT_BIC}"
+    endpoint: "${SWIFT_ENDPOINT}"
+  
+  # Banking systems
+  core_banking:
+    enabled: false
+    system: "Temenos T24"
+    connection_string: "${BANKING_DB_CONN}"
+
+# Monitoring and alerting
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+  sentry:
+    enabled: true
+    dsn: "${SENTRY_DSN}"
+  
+# Security
+security:
+  encryption:
+    algorithm: "AES-256-GCM"
+    key: "${ENCRYPTION_KEY}"
+  authentication:
+    jwt_secret: "${JWT_SECRET}"
+    token_expiry: 3600
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  file: "/var/log/compliance/app.log"
+  rotation: "daily"
+  retention_days: 90
