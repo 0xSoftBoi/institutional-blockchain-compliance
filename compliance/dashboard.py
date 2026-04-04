@@ -5,13 +5,38 @@ Runs on http://localhost:8050 by default.
 Uses sample data when no live monitoring connection is available.
 """
 
+import os
 import random
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import dash
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dash import Input, Output, dash_table, dcc, html
+from flask import Response, request
+
+# ---------------------------------------------------------------------------
+# HTTP Basic Auth
+# ---------------------------------------------------------------------------
+
+DASHBOARD_USER = os.environ.get("DASHBOARD_USER", "")
+DASHBOARD_PASS = os.environ.get("DASHBOARD_PASSWORD", "")
+
+
+def _check_auth(username: str, password: str) -> bool:
+    if not DASHBOARD_USER or not DASHBOARD_PASS:
+        return True  # dev mode — no credentials configured
+    return secrets.compare_digest(username, DASHBOARD_USER) and secrets.compare_digest(password, DASHBOARD_PASS)
+
+
+def _require_auth():
+    auth = request.authorization
+    if not auth or not _check_auth(auth.username, auth.password):
+        return Response(
+            "Authentication required", 401,
+            {"WWW-Authenticate": 'Basic realm="Compliance Dashboard"'},
+        )
 
 # ---------------------------------------------------------------------------
 # Sample / mock data
@@ -87,6 +112,9 @@ def create_app() -> dash.Dash:
         title="Blockchain Compliance Monitor",
         suppress_callback_exceptions=True,
     )
+
+    # Require HTTP Basic Auth on every request
+    app.server.before_request(lambda: _require_auth() or None)
 
     app.layout = dbc.Container(
         fluid=True,
@@ -330,7 +358,7 @@ def create_app() -> dash.Dash:
     return app
 
 
-def run_dashboard(host: str = "0.0.0.0", port: int = 8050, debug: bool = False):
+def run_dashboard(host: str = "127.0.0.1", port: int = 8050, debug: bool = False):
     """Start the Dash server."""
     app = create_app()
     app.run(host=host, port=port, debug=debug)

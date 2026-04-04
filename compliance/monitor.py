@@ -6,14 +6,43 @@ every new block, and emits structured log lines for every flagged result.
 Falls back gracefully when no RPC is reachable (mock mode).
 """
 
+import ipaddress
 import logging
 import time
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 
 from .risk_engine import RiskEngine, RiskScore, SANCTIONED_ADDRESSES
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# RPC URL validation
+# ---------------------------------------------------------------------------
+
+ALLOWED_RPC_SCHEMES = {"https", "wss", "http", "ws"}
+BLOCKED_HOSTS = {"169.254.169.254", "metadata.google.internal"}  # cloud SSRF targets
+
+
+def validate_rpc_url(url: str) -> str:
+    """Validate an RPC URL, blocking private/loopback/SSRF-prone targets."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ALLOWED_RPC_SCHEMES:
+        raise ValueError(f"Invalid RPC scheme: {parsed.scheme}")
+    host = parsed.hostname or ""
+    if host in BLOCKED_HOSTS:
+        raise ValueError(f"Blocked RPC host: {host}")
+    try:
+        addr = ipaddress.ip_address(host)
+        if addr.is_private or addr.is_loopback or addr.is_link_local:
+            raise ValueError(f"Private/loopback RPC not allowed: {host}")
+    except ValueError as exc:
+        if any(kw in str(exc) for kw in ("Blocked", "Private", "loopback", "scheme")):
+            raise
+        # hostname (not a bare IP) — allow
+    return url
+
 
 # ---------------------------------------------------------------------------
 # Expanded local sanctions list (OFAC-style demo addresses)
@@ -48,6 +77,7 @@ class ComplianceMonitor:
         self._w3 = None
 
         if web3_url:
+            validate_rpc_url(web3_url)
             self._connect(web3_url)
 
     # ------------------------------------------------------------------

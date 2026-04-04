@@ -43,11 +43,17 @@ def load_config(config_path: str = "config/config.example.yaml") -> dict:
 
 def cmd_monitor(args, config: dict):
     """Connect to an EVM RPC and monitor transactions for compliance issues."""
-    from compliance.monitor import ComplianceMonitor
+    from compliance.monitor import ComplianceMonitor, validate_rpc_url
 
     rpc_url = args.rpc or config.get("blockchains", {}).get("ethereum", {}).get("rpc_url", "")
     if not rpc_url:
         logger.error("No RPC URL provided. Use --rpc <url> or set blockchains.ethereum.rpc_url in config.")
+        sys.exit(1)
+
+    try:
+        validate_rpc_url(rpc_url)
+    except ValueError as exc:
+        logger.error("Invalid RPC URL: %s", exc)
         sys.exit(1)
 
     logger.info("Starting compliance monitor — RPC: %s", rpc_url)
@@ -61,10 +67,11 @@ def cmd_dashboard(args, config: dict):
     """Launch the Dash compliance dashboard on port 8050."""
     from compliance.dashboard import run_dashboard
 
+    host = getattr(args, "host", "127.0.0.1") or "127.0.0.1"
     port = getattr(args, "port", 8050) or 8050
     debug = getattr(args, "debug", False)
-    logger.info("Launching dashboard at http://localhost:%d", port)
-    run_dashboard(host="0.0.0.0", port=port, debug=debug)
+    logger.info("Launching dashboard at http://%s:%d", host, port)
+    run_dashboard(host=host, port=port, debug=debug)
 
 
 def cmd_report(args, config: dict):
@@ -145,6 +152,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # dashboard
     p_dash = sub.add_parser("dashboard", help="Launch compliance dashboard (port 8050)")
+    p_dash.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Interface to bind (default: 127.0.0.1; use 0.0.0.0 for remote access)",
+    )
     p_dash.add_argument("--port", type=int, default=8050, help="Port to listen on")
     p_dash.add_argument("--debug", action="store_true", help="Enable Dash debug mode")
 
